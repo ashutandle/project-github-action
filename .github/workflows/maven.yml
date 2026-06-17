@@ -1,12 +1,12 @@
 name: Java CI with Maven
-on:  
-    workflow_dispatch:
+on:
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: self-hosted
-
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v4
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -17,36 +17,51 @@ jobs:
       run: mvn dependency:resolve
     - name: Build with Maven
       run: mvn -B package --file pom.xml
-  
+
   security-check:
     runs-on: self-hosted
     needs: build
     steps:
-    
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17                 # ✅ Added: restore Maven cache
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Resolve Dependencies          # ✅ Added: ensure cache is warm
+      run: mvn dependency:resolve
+
     - name: Trivy Installation
       run: |
-         sudo apt-get install wget gnupg
-         wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-         echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-         sudo apt-get update
-         sudo apt-get install trivy
+        sudo apt-get install -y wget gnupg
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+        echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install -y trivy
 
-    - name: Trivy for Scan
-      run: trivy fs --format table -o fs-report.json .
-      
+    - name: Trivy Scan                    # ✅ Added: vuln only, skip secret to avoid Maven calls
+      run: trivy fs --scanners vuln --format table -o fs-report.txt .
+
+    - name: Upload Trivy Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-fs-report
+        path: fs-report.txt
+
     - name: Gitleaks installation
       run: sudo apt install gitleaks -y
 
     - name: Gitleaks Scanning of code  
-      run: gitleaks detect source . -r gitleaks-report.json -f json
-
+      run: gitleaks detect source . -r gitleaks-report.json -f json   
 
   test:
     runs-on: self-hosted
     needs: security-check
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v4
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -60,9 +75,9 @@ jobs:
     runs-on: self-hosted
     needs: test
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v4
     - name: Set up JDK 17
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -70,16 +85,16 @@ jobs:
     - name: Build Project
       run: mvn package
     - name: Upload JAR artifact
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v4
       with:
         name: app-jar
-        path: target/*.jar   
-    
+        path: target/*.jar
+
     - name: Build and download dependencies
-      run: mvn dependency:copy-dependencies -DoutputDirectory=target/dependency
-      
+      run: mvn dependency:copy-dependencies -DoutputDirectory=target/dependency    
+
     - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v8.2.0
+      uses: SonarSource/sonarqube-scan-action@v5.0.0 # Ex: v8.1.0, See the latest version at https://github.com/marketplace/actions/official-sonarqube-scan
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
@@ -91,6 +106,5 @@ jobs:
         pollingTimeoutSec: 600
       env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
-  
-
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }} 
+        
