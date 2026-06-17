@@ -166,6 +166,10 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-south-1
+    
+    - name: Configure kubeconfig for EKS
+      run: aws eks update-kubeconfig --region ap-south-1 --name GC-Bank
+    
     - name: Set up kubectl
       uses: azure/setup-kubectl@v3
       with:
