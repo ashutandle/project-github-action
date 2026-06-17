@@ -74,9 +74,12 @@ jobs:
       with:
         name: app-jar
         path: target/*.jar   
-
+    
+    - name: Build and download dependencies
+      run: mvn dependency:copy-dependencies -DoutputDirectory=target/dependency 
+      
     - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v5.0.0 # Ex: v4.1.0, See the latest version at https://github.com/marketplace/actions/official-sonarqube-scan
+      uses: SonarSource/sonarqube-scan-action@v5.0.0 # Ex: v8.1.0, See the latest version at https://github.com/marketplace/actions/official-sonarqube-scan
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
