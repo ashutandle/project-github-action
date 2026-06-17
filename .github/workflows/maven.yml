@@ -168,9 +168,9 @@ jobs:
 
     - name: Configure kubeconfig
       run: |
-        aws eks update-kubeconfig \
-          --region ap-south-1 \
-          --name GC-Bank
+       aws eks update-kubeconfig \
+       --region ap-south-1 \
+       --name GC-Bank
 
     - name: Verify EKS Access
       run: |
