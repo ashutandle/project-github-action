@@ -129,8 +129,8 @@ jobs:
     - name: Check Docker
       run: |
         docker --version
-        docker info
-        docker ps    
+        sudo docker info
+        sudo docker ps    
         
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
